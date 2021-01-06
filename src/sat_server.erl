@@ -25,7 +25,6 @@ start_link(Port) ->
     gen_server:start_link({local, ?SERVER}, ?MODULE, [Port], []).
 
 start_link() ->
-    solve(1),
     start_link(?DEFAULT_PORT).
 
 get_count() ->
