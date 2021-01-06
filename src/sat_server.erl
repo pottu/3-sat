@@ -4,6 +4,8 @@
 
 -behaviour(gen_server).
 
+-import(solver, [solve/1]).
+
 %% API
 -export([start_link/1, start_link/0, get_count/0, stop/0, run/0]).
 
@@ -23,6 +25,7 @@ start_link(Port) ->
     gen_server:start_link({local, ?SERVER}, ?MODULE, [Port], []).
 
 start_link() ->
+    solve(1),
     start_link(?DEFAULT_PORT).
 
 get_count() ->
@@ -34,6 +37,7 @@ stop() ->
 % gen_server callbacks
 init([Port]) ->
     {ok, LSock} = gen_tcp:listen(Port, [{active, true}, {reuseaddr, true}]),
+    %gen_tcp:send(LSock, io_lib:fwrite("Ready")),
     {ok, #state{port = Port, lsock = LSock}, 0}.
 
 handle_call(get_count, _From, State) ->
@@ -45,7 +49,8 @@ handle_cast(stop, State) ->
 handle_info({tcp, Socket, String}, State) ->
     {ok, Ts, _} = erl_scan:string(String ++ "."),
     {ok, Term} = erl_parse:parse_term(Ts),
-    gen_tcp:send(Socket, io_lib:fwrite("Res: ~w~n", [Term])),
+    Result = solve(Term),
+    gen_tcp:send(Socket, io_lib:fwrite("Res: ~w~n", [Result])),
     RequestCount = State#state.request_count,
     {noreply, State#state{request_count = RequestCount + 1}};
 
