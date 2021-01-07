@@ -4,11 +4,48 @@
 
 -type clause() :: {integer(), integer(), integer()}.
 -type instance() :: [clause()].
--type assignment() :: dict:dict(pos_integer(), boolean()).
+-type assignment() :: orddict:orddict({pos_integer(), boolean()}).
 
 -spec solve(instance()) -> {sat, assignment()} | unsat.
-solve(Instance) ->
-    Instance.
+solve(I) ->
+    Vars = lists:usort(lists:flatten([[abs(T1),abs(T2),abs(T3)] || {T1,T2,T3} <- I])),
+    Max = lists:max(Vars),
+    NrOfVars = length(Vars),
+    case solver_loop(I, Vars, NrOfVars) of
+      exhausted -> unsat;
+      Assignm   -> {sat, pad_assignment(Assignm, Max)}
+    end.
+
+bit(Bit, Number) ->
+  (Number bsr Bit) band 1.
+
+to_bool(1) -> true;
+to_bool(0) -> false.
+
+solver_loop(Instance, Vars, NrOfVars) ->
+  solver_loop(Instance, Vars, NrOfVars, trunc(math:pow(2, NrOfVars)), 0).
+
+solver_loop(_, _, _, N, N) -> exhausted;
+solver_loop(Instance, Vars, NrOfVars, End, N) ->
+  Bools = [to_bool(bit(B, N)) || B <- lists:seq(0, NrOfVars-1)],
+  Assignment = orddict:from_list(lists:zip(Vars, Bools)),
+  case check(Instance, Assignment) of
+    true -> Assignment;
+    false -> solver_loop(Instance, Vars, NrOfVars, End, N+1)
+  end.
+
+
+
+fetch_with_default(Key, Dict, Default) ->
+  case orddict:find(Key, Dict) of
+    {ok, Value} -> Value;
+    error -> Default
+  end.
+    
+
+pad_assignment(Assignm, Max) -> 
+  [fetch_with_default(I, Assignm, true) || I <- lists:seq(1, Max)].
+    
 
 
 % ---- Checker ---------------------------------------------
@@ -22,7 +59,7 @@ check_clause({T1, T2, T3}, A) ->
 
 -spec truth_value(integer(), assignment()) -> boolean().
 truth_value(T, A) ->
-  Val = dict:fetch(abs(T), A),
+  Val = orddict:fetch(abs(T), A),
   if 
     T > 0 -> Val;
     T < 0 -> not Val
