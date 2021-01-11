@@ -5,7 +5,7 @@
 -import(solver, [solve/1]).
 
 %% API
--export([start_link/1, stop/0, run/0]).
+-export([start_link/0, start_link/1, stop/0, run/0]).
 
 %% gen_server callbacks
 -export([init/1, handle_cast/2, handle_info/2,
@@ -21,19 +21,26 @@ run() ->
 start_link(Socket) ->
     gen_server:start_link({local, ?SERVER}, ?MODULE, [Socket], []).
 
-get_count() ->
-    gen_server:call(?SERVER, get_count).
+start_link() ->
+  gen_server:start_link({local, ?SERVER}, ?MODULE, [], []).
 
 stop() ->
     gen_server:cast(?SERVER, stop).
 
 % ---- gen_server callbacks --------------------------------
-init([Socket]) ->
-    gen_tcp:send(Socket, io_lib:fwrite("~w~n", [ready])),
-    {ok, #state{socket = Socket}, 0}.
+%init([Socket]) ->
+%    gen_tcp:send(Socket, io_lib:fwrite("~w~n", [ready])),
+%    {ok, #state{socket = Socket}}.
+
+init([]) ->
+    {ok, #state{socket = none}}.
 
 handle_cast(stop, State) ->
     {stop, normal, State}.
+
+handle_info({socket, Socket}, State) ->
+  gen_tcp:send(Socket, io_lib:fwrite("~w~n", [ready])),
+  {noreply, State#state{socket = Socket}};
 
 % Handle client abort message.
 handle_info({tcp, Socket, "abort"}, State = #state{solver = Solver}) ->

@@ -42,8 +42,9 @@ handle_call(get_count, _From, State) ->
 
 handle_cast(listen, #state{lsock = LSock, connections = Connections} = State) ->
     {ok, Sock} = gen_tcp:accept(LSock),
-    Pid = spawn_link(client_server, start_link, [Sock]),
+    {ok, Pid} = client_server:start_link(),
     gen_tcp:controlling_process(Sock, Pid),
+    Pid ! {socket, Sock},
     Connections = State#state.connections,
     gen_server:cast(?SERVER, listen),
     {noreply, State#state{connections = Connections + 1}};
