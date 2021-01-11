@@ -1,7 +1,5 @@
 -module(sat_server).
 
--include_lib("eunit/include/eunit.hrl").
-
 -behaviour(gen_server).
 
 -import(solver, [solve/1]).
@@ -15,7 +13,7 @@
 
 -define(SERVER, ?MODULE).
 -define(DEFAULT_PORT, 3547).
--record(state, {port, lsock, request_count = 0}).
+-record(state, {port, lsock, connections = 0}).
 
 run() ->
     io:format("Server module~n").
@@ -36,22 +34,28 @@ stop() ->
 % gen_server callbacks
 init([Port]) ->
     {ok, LSock} = gen_tcp:listen(Port, [{active, true}, {reuseaddr, true}]),
-    %gen_tcp:send(LSock, io_lib:fwrite("Ready")),
+    gen_server:cast(?SERVER, listen),
     {ok, #state{port = Port, lsock = LSock}, 0}.
 
 handle_call(get_count, _From, State) ->
-    {reply, {ok, State#state.request_count}, State}.
+    {reply, {ok, State#state.connections}, State}.
+
+handle_cast(listen, #state{lsock = LSock, connections = Connections} = State) ->
+    {ok, Sock} = gen_tcp:accept(LSock),
+    Pid = spawn_link(client_server, start_link, [Sock]),
+    gen_tcp:controlling_process(Sock, Pid),
+    Connections = State#state.connections,
+    gen_server:cast(?SERVER, listen),
+    {noreply, State#state{connections = Connections + 1}};
 
 handle_cast(stop, State) ->
     {stop, normal, State}.
 
-handle_info({tcp, Socket, String}, State) ->
+handle_info({tcp, Socket, String}, _State) ->
     {ok, Ts, _} = erl_scan:string(String ++ "."),
     {ok, Term} = erl_parse:parse_term(Ts),
     Result = solve(Term),
-    gen_tcp:send(Socket, io_lib:fwrite("Res: ~w~n", [Result])),
-    RequestCount = State#state.request_count,
-    {noreply, State#state{request_count = RequestCount + 1}};
+    gen_tcp:send(Socket, io_lib:fwrite("Res: ~w~n", [Result]));
 
 handle_info({tcp_closed, _Socket}, #state{lsock = LSock} = State) ->
     {ok, _Sock} = gen_tcp:accept(LSock),
