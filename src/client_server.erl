@@ -19,10 +19,10 @@ run() ->
 
 % API functions
 start_link(Socket) ->
-    gen_server:start_link({local, ?SERVER}, ?MODULE, [Socket], []).
+    gen_server:start_link(?MODULE, [Socket], []).
 
 start_link() ->
-  gen_server:start_link({local, ?SERVER}, ?MODULE, [], []).
+  gen_server:start_link(?MODULE, [], []).
 
 stop() ->
     gen_server:cast(?SERVER, stop).

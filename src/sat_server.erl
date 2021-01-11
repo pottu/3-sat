@@ -14,6 +14,9 @@
 -define(SERVER, ?MODULE).
 -define(DEFAULT_PORT, 3547).
 -record(state, {port, lsock, connections = 0}).
+-define(CHILDSPEC, [#{id => client_server,
+                      start => {client_server, start_link, []},
+                      shutdown => brutal_kill}]).
 
 run() ->
     io:format("Server module~n").
@@ -42,12 +45,21 @@ handle_call(get_count, _From, State) ->
 
 handle_cast(listen, #state{lsock = LSock, connections = Connections} = State) ->
     {ok, Sock} = gen_tcp:accept(LSock),
-    {ok, Pid} = client_server:start_link(),
-    gen_tcp:controlling_process(Sock, Pid),
-    Pid ! {socket, Sock},
-    Connections = State#state.connections,
-    gen_server:cast(?SERVER, listen),
-    {noreply, State#state{connections = Connections + 1}};
+    if
+        Connections < 7 ->
+            {ok, Pid} = client_server:start_link(),
+            gen_tcp:controlling_process(Sock, Pid),
+            Pid ! {socket, Sock},
+            Connections = State#state.connections,
+            gen_server:cast(?SERVER, listen),
+            io:format("~w~n", [Connections]),
+            {noreply, State#state{connections = Connections + 1}};
+        true ->
+            gen_tcp:send(Sock, io_lib:fwrite("~w~n", [busy])),
+            gen_tcp:close(Sock),
+            gen_server:cast(?SERVER, listen),
+            {noreply, State}
+    end;
 
 handle_cast(stop, State) ->
     {stop, normal, State}.
@@ -58,9 +70,9 @@ handle_info({tcp, Socket, String}, _State) ->
     Result = solve(Term),
     gen_tcp:send(Socket, io_lib:fwrite("Res: ~w~n", [Result]));
 
-handle_info({tcp_closed, _Socket}, #state{lsock = LSock} = State) ->
+handle_info({tcp_closed, _Socket}, #state{lsock = LSock, connections = Connections} = State) ->
     {ok, _Sock} = gen_tcp:accept(LSock),
-    {noreply, State};
+    {noreply, State#state{connections = Connections - 1}};
 
 handle_info(timeout, #state{lsock = LSock} = State) ->
     {ok, _Sock} = gen_tcp:accept(LSock),
