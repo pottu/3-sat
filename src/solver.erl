@@ -1,11 +1,15 @@
 -module(solver).
 -compile(export_all).
--export([solve/1]).
+-export([is_instance/1, solve/1]).
 
 -type clause() :: {integer(), integer(), integer()}.
 -type variable() :: pos_integer().
 -type instance() :: [clause()].
 -type assignment() :: orddict:orddict({variable(), boolean()}).
+
+-spec is_instance(term()) -> boolean().
+% TODO: Implement!
+is_instance(Term) -> is_list(Term).
 
 % ---- Solver ----------------------------------------------
 -spec solve(instance()) -> {sat, assignment()} | unsat.
