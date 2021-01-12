@@ -12,7 +12,7 @@
 
 -record(state, {socket = no_socket, msg = no_msg, solver = no_solver, timeout = no_timer}).
 
--define(CLIENT_TIMEOUT, 60000).
+-define(CLIENT_TIMEOUT, 20000).
 -define(PULSE_INTERVAL, 10000).
 
 % API functions
@@ -69,13 +69,11 @@ handle_info({solution, Result}, State = #state{socket = Socket}) ->
 
 % Handle closed client connection.
 handle_info({tcp_closed, _Socket}, State) ->
-    % TODO: stop() here
-    exit(normal),
-    {noreply, State};
+  {stop, shutdown, State};
 
 % Handle closed client connection.
 handle_info({tcp_error, _Socket, _Reason}, State) ->
-  {stop, tcp_error, State};
+  {stop, shutdown, State};
 
 % Handle pulse.
 handle_info(pulse, State = #state{socket = Socket, msg = Msg}) ->
@@ -86,7 +84,7 @@ handle_info(pulse, State = #state{socket = Socket, msg = Msg}) ->
 % Handle timeout.
 handle_info(client_timeout, State = #state{socket = Socket}) ->
   gen_tcp:send(Socket, io_lib:fwrite("timeout~n", [])),
-  {stop, client_timeout, State}.
+  {stop, shutdown, State}.
 
 terminate(_Reason, #state{solver = Solver}) ->
   case is_pid(Solver) of
