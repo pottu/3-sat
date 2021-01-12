@@ -33,7 +33,6 @@ handle_info({socket, Socket}, State) ->
 
 % Handle client message.
 handle_info({tcp, Socket, String}, State = #state{solver = Solver, timeout = Timeout}) ->
-  gen_tcp:send(Socket, io_lib:print(String)),
   try
     {ok, Ts, _} = erl_scan:string(String ++ "."),
     {ok, Term} = erl_parse:parse_term(Ts),
