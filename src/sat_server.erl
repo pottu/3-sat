@@ -65,12 +65,6 @@ handle_cast(listen, #state{lsock = LSock, connections = Connections} = State) ->
 handle_cast(stop, State) ->
     {stop, normal, State}.
 
-handle_info({tcp, Socket, String}, _State) ->
-    {ok, Ts, _} = erl_scan:string(String ++ "."),
-    {ok, Term} = erl_parse:parse_term(Ts),
-    Result = solve(Term),
-    gen_tcp:send(Socket, io_lib:fwrite("Res: ~w~n", [Result]));
-
 handle_info({tcp_closed, _Socket}, #state{lsock = LSock} = State) ->
     {ok, _Sock} = gen_tcp:accept(LSock),
     {noreply, State};
