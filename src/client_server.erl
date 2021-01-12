@@ -70,7 +70,9 @@ handle_info({solution, Result}, State = #state{socket = Socket}) ->
 
 % Handle closed client connection.
 handle_info({tcp_closed, _Socket}, State) ->
-  {stop, tcp_closed, State};
+    % TODO: stop() here
+    exit(normal),
+    {noreply, State};
 
 % Handle closed client connection.
 handle_info({tcp_error, _Socket, _Reason}, State) ->
