@@ -12,7 +12,7 @@
 
 -record(state, {socket = no_socket, msg = no_msg, solver = no_solver, timeout = no_timer}).
 
--define(CLIENT_TIMEOUT, 20000).
+-define(CLIENT_TIMEOUT, 60000).
 -define(PULSE_INTERVAL, 10000).
 
 % API functions
