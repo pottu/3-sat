@@ -14,7 +14,7 @@
 
 -define(SERVER, ?MODULE).
 -define(DEFAULT_PORT, 3547).
--record(state, {port, lsock, counterref}).
+-record(state, {port, lsock, connections = 0}).
 
 run() ->
     io:format("Server module~n").
@@ -36,25 +36,21 @@ stop() ->
 init([Port]) ->
     process_flag(trap_exit, true),
     {ok, LSock} = gen_tcp:listen(Port, [{active, true}, {reuseaddr, true}]),
-    CounterRef = new(1, []),
-    {ok, #state{port = Port, lsock = LSock, counterref = CounterRef}, 0}.
+    {ok, #state{port = Port, lsock = LSock}, 0}.
 
-handle_call(get_count, _From, #state{counterref = CounterRef} = State) ->
-    Connections = counters:get(CounterRef, 1, 1),
-    {reply, {ok, Connections}, State}.
+handle_call(get_count, _From, State) ->
+    {reply, {ok, State#state.connections}, State}.
 
-handle_cast(listen, #state{lsock = LSock, counterref = CounterRef} = State) ->
+handle_cast(listen, #state{lsock = LSock, connections = Connections} = State) ->
     case gen_tcp:accept(LSock, 500) of
         {ok, Sock} ->
             gen_server:cast(?SERVER, listen),
-            Connections = get(CounterRef, 1),
             if
                 Connections + 1 < 8 ->
                     {ok, Pid} = client_server:start_link(),
                     gen_tcp:controlling_process(Sock, Pid),
                     Pid ! {socket, Sock},
-                    add(CounterRef, 1, 1),
-                    {noreply, State};
+                    {noreply, State#state{connections = Connections + 1}};
                 true ->
                     gen_tcp:send(Sock, io_lib:fwrite("~w~n", [busy])),
                     gen_tcp:close(Sock),
@@ -78,9 +74,8 @@ handle_info({tcp_closed, _Socket}, #state{lsock = LSock} = State) ->
     {ok, _Sock} = gen_tcp:accept(LSock),
     {noreply, State};
 
-handle_info({'EXIT', _Pid, _Reason}, #state{counterref = CounterRef} = State) ->
-    sub(CounterRef, 1, 1),
-    {noreply, State};
+handle_info({'EXIT', _Pid, _Reason}, #state{connections = Connections} = State) ->
+    {noreply, State#state{connections = Connections - 1}};
 
 handle_info(timeout, State) ->
     gen_server:cast(?SERVER, listen),
