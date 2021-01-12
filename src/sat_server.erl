@@ -14,6 +14,7 @@
 
 -define(SERVER, ?MODULE).
 -define(DEFAULT_PORT, 3547).
+-define(MAX_CONNECTIONS, 7).
 -record(state, {port, lsock, connections = 0}).
 
 run() ->
@@ -46,7 +47,7 @@ handle_cast(listen, #state{lsock = LSock, connections = Connections} = State) ->
         {ok, Sock} ->
             gen_server:cast(?SERVER, listen),
             if
-                Connections + 1 < 8 ->
+                Connections < ?MAX_CONNECTIONS ->
                     {ok, Pid} = client_server:start_link(),
                     gen_tcp:controlling_process(Sock, Pid),
                     Pid ! {socket, Sock},
