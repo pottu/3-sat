@@ -14,6 +14,7 @@ is_instance(Term) -> is_list(Term).
 % ---- Solver ----------------------------------------------
 -spec solve(instance()) -> {sat, assignment()} | unsat.
 % Solve an instance.
+solve([]) -> {sat, []};
 solve(I) ->
     Vars = lists:usort(lists:flatten([[abs(T1),abs(T2),abs(T3)] || {T1,T2,T3} <- I])),
     Max = lists:max(Vars),
@@ -52,10 +53,13 @@ solver_loop(Instance, Vars, NrOfVars, End, N) ->
 
 % ---- Parallelised solving --------------------------------
 -spec solve(pid(), instance()) -> no_return().
+solve(Parent, []) ->
+  Parent ! {solution, {sat, []}},
+  exit(done);
 solve(Parent, I) ->
     Vars = lists:usort(lists:flatten([[abs(T1),abs(T2),abs(T3)] || {T1,T2,T3} <- I])),
-    Max = lists:max(Vars),
     NrOfVars = length(Vars),
+    Max = lists:max(Vars),
     case solver_driver(I, Vars, NrOfVars) of
       exhausted -> Parent ! {solution, unsat};
       Assignm   -> Parent ! {solution, {sat, pad_assignment(Assignm, Max)}}
