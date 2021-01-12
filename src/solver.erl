@@ -9,7 +9,11 @@
 
 -spec is_instance(term()) -> boolean().
 % TODO: Implement!
-is_instance(Term) -> is_list(Term).
+is_instance([]) ->
+    true;
+
+is_instance([{A, B, C} | Rest]) when is_integer(A) and is_integer(B) and is_integer(C) ->
+    is_instance(Rest).
 
 % ---- Solver ----------------------------------------------
 -spec solve(instance()) -> {sat, assignment()} | unsat.
