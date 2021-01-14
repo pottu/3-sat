@@ -1,8 +1,7 @@
 -module(prop_solver).
--compile(export_all).
 
 -include_lib("proper/include/proper.hrl").
--import(solver, [check/2]).
+-import(solver, [check/2, is_instance/1]).
 
 
 
@@ -17,7 +16,7 @@ gen_unsat_instance() ->
   ?LET(Inst, gen_instance(),
     begin
       InstWithBadClauses = [{1,1,1},{-1,-1,-1} | Inst],
-      Shuffled = lists:sort([{random:uniform(), C} || C <- InstWithBadClauses]),
+      Shuffled = lists:sort([{rand:uniform(), C} || C <- InstWithBadClauses]),
       [C || {_, C} <- Shuffled]
     end
   ).
@@ -35,3 +34,6 @@ prop_checker_fail_unsat_instance() ->
       not solver:check(I,A)
     )
   ).
+
+prop_instance_is_instance() ->
+  ?FORALL(I, gen_instance(), is_instance(I)).

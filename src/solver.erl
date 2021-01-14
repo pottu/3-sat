@@ -8,12 +8,10 @@
 -type assignment() :: orddict:orddict({variable(), boolean()}).
 
 -spec is_instance(term()) -> boolean().
-% TODO: Implement!
-is_instance([]) ->
-    true;
-
+is_instance([]) -> true;
 is_instance([{A, B, C} | Rest]) when is_integer(A) and is_integer(B) and is_integer(C) ->
-    is_instance(Rest).
+    (A =/= 0) and (B =/= 0) and (C =/= 0) and is_instance(Rest);
+is_instance(_) -> false.
 
 % ---- Solver ----------------------------------------------
 -spec solve(instance()) -> {sat, assignment()} | unsat.
