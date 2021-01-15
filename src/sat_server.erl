@@ -14,7 +14,7 @@
 
 -define(SERVER, ?MODULE).
 -define(DEFAULT_PORT, 3547).
--define(MAX_CONNECTIONS, 7).
+-define(MAX_CONNECTIONS, 8).
 -record(state, {port, lsock, connections = 0}).
 
 run() ->
